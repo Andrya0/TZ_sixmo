@@ -123,11 +123,22 @@ export async function createBrowserSession(input: SkillInput, logger?: Logger): 
     'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
   });
 
-  await context.tracing.start({
-    screenshots: true,
-    snapshots: true,
-    sources: true
-  });
+  // 🔥 FIX: безопасный старт tracing
+  try {
+    await context.tracing.start({
+      screenshots: true,
+      snapshots: true,
+      sources: true
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (!message.includes('Tracing has been already started')) {
+      throw error;
+    }
+
+    resolvedLogger.debug('Tracing already started, skipping');
+  }
 
   const page = await context.newPage();
 
@@ -158,9 +169,14 @@ export async function createBrowserSession(input: SkillInput, logger?: Logger): 
     page,
     close: async () => {
       try {
-        await context.tracing.stop({ path: `${input.outputDir}/trace.zip` }).catch(() => undefined);
-      } finally {
+        try {
+          await context.tracing.stop({ path: `${input.outputDir}/trace.zip` });
+        } catch {
+          // tracing мог быть уже остановлен Playwright test runner'ом
+        }
+
         await context.close().catch(() => undefined);
+      } finally {
         await browser.close().catch(() => undefined);
       }
     }
