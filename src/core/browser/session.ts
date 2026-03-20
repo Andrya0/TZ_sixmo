@@ -1,6 +1,8 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import type { SkillInput } from '../domain/contracts.js';
-import { createLogger, type Logger } from '../observability/logger.js';
+import type { Logger } from '../observability/logger.js';
 
 export type BrowserSession = {
   browser: Browser;
@@ -8,6 +10,10 @@ export type BrowserSession = {
   page: Page;
   close: () => Promise<void>;
 };
+
+async function ensureOutputDir(dir: string): Promise<void> {
+  await fs.mkdir(path.resolve(dir), { recursive: true });
+}
 
 async function launchBrowser(input: SkillInput, logger: Logger): Promise<Browser> {
   const channels: Array<'msedge' | 'chrome' | undefined> = ['msedge', 'chrome', undefined];
@@ -83,8 +89,8 @@ async function applyStealth(context: BrowserContext): Promise<void> {
       }) as typeof window.navigator.permissions.query;
     }
 
-    if (!(window as any).chrome) {
-      (window as any).chrome = {
+    if (!(window as Window & { chrome?: { runtime: Record<string, never> } }).chrome) {
+      (window as Window & { chrome?: { runtime: Record<string, never> } }).chrome = {
         runtime: {}
       };
     }
@@ -98,19 +104,19 @@ async function applyStealth(context: BrowserContext): Promise<void> {
   });
 }
 
-export async function createBrowserSession(input: SkillInput, logger?: Logger): Promise<BrowserSession> {
-  const resolvedLogger = logger ?? createLogger(Boolean(input.debug));
-
-  resolvedLogger.info('Launching browser', {
+export async function createBrowserSession(input: SkillInput, logger: Logger): Promise<BrowserSession> {
+  logger.info('Launching browser', {
     headless: input.headless,
     slowMoMs: input.slowMoMs,
-    locale: (input as any).locale
+    locale: input.locale
   });
 
-  const browser = await launchBrowser(input, resolvedLogger);
+  await ensureOutputDir(input.outputDir);
+
+  const browser = await launchBrowser(input, logger);
 
   const context = await browser.newContext({
-    locale: (input as any).locale ?? 'ru-RU',
+    locale: input.locale,
     ignoreHTTPSErrors: true,
     viewport: null,
     userAgent:
@@ -123,13 +129,15 @@ export async function createBrowserSession(input: SkillInput, logger?: Logger): 
     'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
   });
 
-  // 🔥 FIX: безопасный старт tracing
+  let tracingStartedBySession = false;
+
   try {
     await context.tracing.start({
       screenshots: true,
       snapshots: true,
       sources: true
     });
+    tracingStartedBySession = true;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
@@ -137,26 +145,26 @@ export async function createBrowserSession(input: SkillInput, logger?: Logger): 
       throw error;
     }
 
-    resolvedLogger.debug('Tracing already started, skipping');
+    logger.debug('Tracing already started, skipping manual tracing');
   }
 
   const page = await context.newPage();
 
   page.on('console', (msg) => {
-    resolvedLogger.debug('Browser console', {
+    logger.debug('Browser console', {
       type: msg.type(),
       text: msg.text()
     });
   });
 
   page.on('pageerror', (error) => {
-    resolvedLogger.warn('Page error', {
+    logger.warn('Page error', {
       message: error.message
     });
   });
 
   page.on('requestfailed', (request) => {
-    resolvedLogger.warn('Network request failed', {
+    logger.warn('Network request failed', {
       url: request.url(),
       method: request.method(),
       failure: request.failure()?.errorText ?? 'unknown'
@@ -169,14 +177,17 @@ export async function createBrowserSession(input: SkillInput, logger?: Logger): 
     page,
     close: async () => {
       try {
-        try {
-          await context.tracing.stop({ path: `${input.outputDir}/trace.zip` });
-        } catch {
-          // tracing мог быть уже остановлен Playwright test runner'ом
+        if (tracingStartedBySession) {
+          try {
+            await context.tracing.stop({ path: path.resolve(input.outputDir, 'trace.zip') });
+          } catch (error) {
+            logger.warn('Failed to stop tracing', {
+              error: error instanceof Error ? error.message : String(error)
+            });
+          }
         }
-
-        await context.close().catch(() => undefined);
       } finally {
+        await context.close().catch(() => undefined);
         await browser.close().catch(() => undefined);
       }
     }

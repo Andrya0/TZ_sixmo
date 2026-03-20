@@ -1,14 +1,15 @@
 import { createBrowserSession } from '../core/browser/session.js';
-import type { SkillInput, SkillResult } from '../core/domain/contracts.js';
+import { skillInputSchema, type SkillInput, type SkillResult } from '../core/domain/contracts.js';
 import { createLogger, type Logger } from '../core/observability/logger.js';
 import { runForm } from '../core/workflow/formRunner.js';
 
 export async function runSixmoSkill(input: SkillInput, logger?: Logger): Promise<SkillResult> {
-  const resolvedLogger = logger ?? createLogger(Boolean(input.debug));
-  const session = await createBrowserSession(input, resolvedLogger);
+  const resolvedInput = skillInputSchema.parse(input);
+  const resolvedLogger = logger ?? createLogger(Boolean(resolvedInput.debug));
+  const session = await createBrowserSession(resolvedInput, resolvedLogger);
 
   try {
-    const result = await runForm(session.page, input, resolvedLogger);
+    const result = await runForm(session.page, resolvedInput, resolvedLogger);
 
     return {
       ok: result.ok,
@@ -17,7 +18,7 @@ export async function runSixmoSkill(input: SkillInput, logger?: Logger): Promise
       filledFields: result.filledFields,
       artifacts: {
         screenshots: [],
-        tracePath: `${input.outputDir}/trace.zip`
+        tracePath: `${resolvedInput.outputDir}/trace.zip`
       },
       warnings: []
     };
