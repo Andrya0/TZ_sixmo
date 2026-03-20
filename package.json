@@ -1,0 +1,25 @@
+{
+  "name": "sixmo-form-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Robust skill/tool for automatic completion of the sixmo.ru multi-step adaptive form.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "skill": "node dist/index.js",
+    "dev": "tsx src/index.ts --input ./skill/examples/request.sample.json",
+    "test:smoke": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "playwright": "^1.53.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.53.0",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.3"
+  }
+}

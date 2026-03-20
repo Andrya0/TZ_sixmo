@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sixmo_form_agent_input",
+  "type": "object",
+  "required": ["fields"],
+  "properties": {
+    "url": { "type": "string", "format": "uri", "default": "https://sixmo.ru/" },
+    "headless": { "type": "boolean", "default": true },
+    "timeoutMs": { "type": "integer", "default": 90000 },
+    "transitionTimeoutMs": { "type": "integer", "default": 5000 },
+    "initialSettlingMs": { "type": "integer", "default": 1200 },
+    "maxSteps": { "type": "integer", "default": 12 },
+    "slowMoMs": { "type": "integer", "default": 0 },
+    "locale": { "type": "string", "default": "ru-RU" },
+    "takeScreenshots": { "type": "boolean", "default": true },
+    "outputDir": { "type": "string", "default": "./artifacts" },
+    "submit": { "type": "boolean", "default": true },
+    "debug": { "type": "boolean", "default": true },
+    "dumpConsole": { "type": "boolean", "default": true },
+    "dumpNetworkFailures": { "type": "boolean", "default": true },
+    "dumpOnError": { "type": "boolean", "default": true },
+    "successTexts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["спасибо", "успешно", "результат", "готово", "thank you", "success"]
+    },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["key", "type", "value"],
+        "properties": {
+          "key": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["text", "textarea", "email", "tel", "number", "select", "radio", "checkbox", "file", "date"]
+          },
+          "value": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          },
+          "step": { "type": "integer", "minimum": 1 },
+          "required": { "type": "boolean", "default": true },
+          "aliases": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "selectors": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  }
+}

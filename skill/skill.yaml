@@ -1,0 +1,16 @@
+name: sixmo_form_agent
+version: 1.0.0
+description: >-
+  Browser automation skill for resilient completion of the sixmo.ru multi-step test form,
+  including file upload and unstable element ordering.
+entrypoint:
+  command: npm
+  args:
+    - run
+    - skill
+    - --
+    - --input
+    - '{{input_file}}'
+input_schema: ./skill/input.schema.json
+artifacts:
+  - ./artifacts

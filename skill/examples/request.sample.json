@@ -1,0 +1,47 @@
+{
+  "url": "https://sixmo.ru/",
+  "headless": false,
+  "slowMoMs": 300,
+  "timeoutMs": 25000,
+  "transitionTimeoutMs": 9000,
+  "initialSettlingMs": 1200,
+  "maxSteps": 8,
+  "outputDir": "./artifacts",
+  "navigationTexts": {
+    "next": ["Далее", "Продолжить", "Next", "Continue"],
+    "back": ["Назад", "Back"],
+    "submit": ["Завершить", "Отправить", "Получить результат", "Finish", "Submit"]
+  },
+  "fields": [
+    {
+      "key": "text-bank-1",
+      "type": "text",
+      "value": "Букля",
+      "aliases": []
+    },
+    {
+      "key": "text-bank-2",
+      "type": "text",
+      "value": "Гриффиндор",
+      "aliases": []
+    },
+    {
+      "key": "select-bank-1",
+      "type": "select",
+      "value": "Хогвартс",
+      "aliases": []
+    },
+    {
+      "key": "textarea-bank-1",
+      "type": "textarea",
+      "value": "Автоматическое прохождение тестовой формы",
+      "aliases": []
+    },
+    {
+      "key": "file-bank-1",
+      "type": "file",
+      "value": "./tests/fixtures/sample-upload.txt",
+      "aliases": []
+    }
+  ]
+}
