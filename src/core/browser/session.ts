@@ -1,12 +1,6 @@
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import type { SkillInput } from '../domain/contracts.js';
-
-type Logger = {
-  debug: (msg: string, data?: any) => void;
-  info: (msg: string, data?: any) => void;
-  warn: (msg: string, data?: any) => void;
-  error: (msg: string, data?: any) => void;
-};
+import { createLogger, type Logger } from '../observability/logger.js';
 
 export type BrowserSession = {
   browser: Browser;
@@ -104,14 +98,16 @@ async function applyStealth(context: BrowserContext): Promise<void> {
   });
 }
 
-export async function createBrowserSession(input: SkillInput, logger: Logger): Promise<BrowserSession> {
-  logger.info('Launching browser', {
+export async function createBrowserSession(input: SkillInput, logger?: Logger): Promise<BrowserSession> {
+  const resolvedLogger = logger ?? createLogger(Boolean(input.debug));
+
+  resolvedLogger.info('Launching browser', {
     headless: input.headless,
     slowMoMs: input.slowMoMs,
     locale: (input as any).locale
   });
 
-  const browser = await launchBrowser(input, logger);
+  const browser = await launchBrowser(input, resolvedLogger);
 
   const context = await browser.newContext({
     locale: (input as any).locale ?? 'ru-RU',
@@ -136,20 +132,20 @@ export async function createBrowserSession(input: SkillInput, logger: Logger): P
   const page = await context.newPage();
 
   page.on('console', (msg) => {
-    logger.debug('Browser console', {
+    resolvedLogger.debug('Browser console', {
       type: msg.type(),
       text: msg.text()
     });
   });
 
   page.on('pageerror', (error) => {
-    logger.warn('Page error', {
+    resolvedLogger.warn('Page error', {
       message: error.message
     });
   });
 
   page.on('requestfailed', (request) => {
-    logger.warn('Network request failed', {
+    resolvedLogger.warn('Network request failed', {
       url: request.url(),
       method: request.method(),
       failure: request.failure()?.errorText ?? 'unknown'

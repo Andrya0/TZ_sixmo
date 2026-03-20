@@ -1,19 +1,14 @@
 import { createBrowserSession } from '../core/browser/session.js';
 import type { SkillInput, SkillResult } from '../core/domain/contracts.js';
+import { createLogger, type Logger } from '../core/observability/logger.js';
 import { runForm } from '../core/workflow/formRunner.js';
 
-type Logger = {
-  debug: (msg: string, data?: any) => void;
-  info: (msg: string, data?: any) => void;
-  warn: (msg: string, data?: any) => void;
-  error: (msg: string, data?: any) => void;
-};
-
-export async function runSixmoSkill(input: SkillInput, logger: Logger): Promise<SkillResult> {
-  const session = await createBrowserSession(input, logger);
+export async function runSixmoSkill(input: SkillInput, logger?: Logger): Promise<SkillResult> {
+  const resolvedLogger = logger ?? createLogger(Boolean(input.debug));
+  const session = await createBrowserSession(input, resolvedLogger);
 
   try {
-    const result = await runForm(session.page, input, logger);
+    const result = await runForm(session.page, input, resolvedLogger);
 
     return {
       ok: result.ok,
@@ -27,7 +22,7 @@ export async function runSixmoSkill(input: SkillInput, logger: Logger): Promise<
       warnings: []
     };
   } finally {
-    logger.info('Closing browser');
+    resolvedLogger.info('Closing browser');
     await session.close();
   }
 }
